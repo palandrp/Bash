@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
      echo
      echo -n "Ваше любимое растение? "
      read
