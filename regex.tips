@@ -1,0 +1,31 @@
+Syntax: grep [options] PATTERN [file] Options:
+
+-w 				Forces PATTERN to match whole words only 
+-x 				Forces PATTERN to match whole lines only 
+-E 				Makes PATTERN an extended regular expression 
+-f 				Obtains PATTERN from a file
+-v 				Inverts the match (prints nonmatching lines) 
+-m [NUM] 		Stops after NUM matches
+-R 				Acts recursively when searching through directories
+—color=[WHEN] 	Displays output in color; WHEN is always, auto, or never
+
+Metacharacters:
+
+[ ]				Matches anything inside the brackets, either individually or as a whole, including letters or
+				numbers. Be aware that lower- and uppercase letters are different.
+-				Creates a range; for example, one through nine would be 1-9. This dash can also be used to search for 
+				a range of letters such as a-z or A-Z. There are no spaces between characters when using a range.
+
+^				Negates a search when used inside brackets. The caret is used outside brackets to find only lines 
+				that begin with a given string.
+$				Similar to a caret outside brackets, finds lines based on their ending character or string.
+.				Finds any character in its position.
+*				Matches any character zero or more times.
+( ) 			Combines multiple patterns.
+|				Finds left or right values, which is very useful in combination with ( ).
+
+
+
+
+
+
