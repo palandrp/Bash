@@ -1,0 +1,29 @@
+Command for HEX-mode:
+:%xxd 		For hex-mode
+:%xxd -r 	For normal mode
+
+Commands for command mode:
+
+e Moves to the end of a word
+b Moves to the beginning of a word
+$ Moves to the end of a line
+H Moves to the first line onscreen
+L Moves to the last line onscreen
+i Enters insert mode
+a Appends after the cursor
+o Opens a new line below and inserts
+O Opens a new line above and inserts
+R Enters insert mode but replaces characters instead of inserting dd Deletes the current line
+x Deletes text under the cursor
+yy Yanks (copies) the current line
+p Pastes the yanked line
+u Undoes the last action
+
+Commands for last line mode:
+
+:n
+:w Writes the file to disk
+Jumps to line n
+:q
+:q! Quits without saving changes
+
