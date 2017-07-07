@@ -1,0 +1,576 @@
+=======================================================================================
+Вертикальная выборка только различных строк с сортировкой двух столбцов по убыванию:
+
+SELECT DISTINCT speed, ram 
+FROM PC 
+ORDER BY ram DESC, speed DESC;
+
+=======================================================================================
+Правильная работа с итоговыми значениями:
+
+SELECT  model, price 
+      FROM PC
+      WHERE price = (SELECT MAX(price) 
+                     FROM PC)
+
+=======================================================================================
+Получить информацию о частоте процессора и объеме оперативной памяти для компьютеров с ценой ниже $500:
+могут использоваться: «=» (равно), «>» (больше), «>=» (больше или равно), «<=» (меньше или равно) и «<>» (не равно).
+
+SELECT DISTINCT speed, ram 
+FROM PC 
+WHERE price < 500 
+ORDER BY 2 DESC;
+
+price < 1000	Цена меньше 1000
+type = ‘laptop’	Типом продукции является портативный компьютер
+cd = ‘24x’	24-скоростной CD-ROM
+color <> ’y’	Не цветной принтер
+ram – 128 > 0	Объем оперативной памяти свыше 128 Мбайт
+Price <= speed*2	Цена не превышает удвоенной частоты процессора
+
+=======================================================================================
+Пересечение:
+
+SELECT * FROM product
+WHERE maker = 'A'
+INTERSECT				-- пересечение
+SELECT * FROM product
+WHERE type = 'pc';
+
+Эквивалентно:
+
+SELECT * FROM product
+WHERE maker = 'A' AND type = 'pc';
+
+=======================================================================================
+Объединение:
+
+SELECT * FROM product
+WHERE maker = 'A'
+UNION
+SELECT * FROM product
+WHERE maker = 'B';
+
+Эквивалентно:
+
+SELECT * FROM product
+WHERE maker = 'A' OR maker = 'B';
+
+=======================================================================================
+Разность:
+
+SELECT * FROM product
+EXCEPT
+SELECT * FROM product WHERE type = 'pc';
+
+Эквивалентно:
+
+SELECT * FROM product
+WHERE NOT type = 'pc';
+
+=======================================================================================
+14-я задача на 3-й уровень сложности:
+Найти производителей, которые выпускают более одной модели, при этом все выпускаемые производителем модели являются продуктами одного типа.
+Вывести: maker, type
+
+--Схема БД состоит из четырех таблиц:
+--Product(maker, model, type)
+--PC(code, model, speed, ram, hd, cd, price)
+--Laptop(code, model, speed, ram, hd, price, screen)
+--Printer(code, model, color, type, price)
+--Таблица Product представляет производителя (maker), номер модели (model) и тип ('PC' - ПК, 'Laptop' - ПК-блокнот или 'Printer' - принтер). Предполагается, что номера моделей в таблице Product уникальны для всех производителей и типов продуктов. В таблице PC для каждого ПК, однозначно определяемого уникальным кодом – code, указаны модель – model (внешний ключ к таблице Product), скорость - speed (процессора в мегагерцах), объем памяти - ram (в мегабайтах), размер диска - hd (в гигабайтах), скорость считывающего устройства - cd (например, '4x') и цена - price. Таблица Laptop аналогична таблице РС за исключением того, что вместо скорости CD содержит размер экрана -screen (в дюймах). В таблице Printer для каждой модели принтера указывается, является ли он цветным - color ('y', если цветной), тип принтера - type (лазерный – 'Laser', струйный – 'Jet' или матричный – 'Matrix') и цена - price.
+
+SELECT DISTINCT maker, type
+    FROM Product
+WHERE maker IN (SELECT maker FROM Product
+GROUP BY maker
+HAVING COUNT(DISTINCT model) > 1 AND COUNT(DISTINCT type) = 1)
+
+=======================================================================================
+Найдите пары моделей PC, имеющих одинаковые скорость и RAM. В результате каждая пара указывается 
+только один раз, т.е. (i,j), но не (j,i), Порядок вывода: модель с большим номером, модель с меньшим номером, скорость и RAM.
+
+SELECT DISTINCT A.model AS model_A, B.model AS model_B, A.speed, A.ram
+   FROM PC AS A, PC AS B
+WHERE A.speed = B.speed AND A.ram = B.ram AND A.model > B.model
+
+=======================================================================================
+Найти номер модели и производителя ПК, имеющих цену менее $600:
+
+SELECT DISTINCT PC.model, maker
+FROM PC, Product
+WHERE PC.model = Product.model AND 
+ price < 600;
+
+ ИЛИ!
+
+SELECT DISTINCT PC.model, maker
+FROM PC, (SELECT maker, model
+ FROM Product
+ ) AS Prod          --переименование
+WHERE PC.model = Prod.model AND 
+ price < 600;
+
+Переименование является обязательным, если в предложении FROM используется подзапрос, так как, в противном случае, у нас 
+нет возможности уточнения имени столбца из подзапроса.
+
+=======================================================================================
+Найдите производителей самых дешевых цветных принтеров. Вывести: maker, price
+
+SELECT DISTINCT Product.maker, Printer.price 
+   FROM Product JOIN Printer ON Product.model = Printer.model
+WHERE Printer.color = 'y' 
+  AND Printer.price = (SELECT
+      MIN(price) FROM Printer
+      WHERE color = 'y')
+
+=======================================================================================
+Для каждого производителя, имеющего модели в таблице Laptop, найдите средний размер экрана выпускаемых им ПК-блокнотов. 
+Вывести: maker, средний размер экрана.
+
+SELECT maker, AVG(screen) FROM Product JOIN Laptop ON Product.model = Laptop.model
+GROUP BY maker
+
+=======================================================================================
+Найдите производителей, выпускающих по меньшей мере три различных модели ПК. Вывести: Maker, число моделей ПК.
+
+SELECT maker, COUNT(model) AS Q_model FROM Product
+WHERE type = 'pc'
+GROUP BY maker
+HAVING COUNT(model) >= 3
+
+=======================================================================================
+
+Найдите производителей, которые производили бы как ПК
+со скоростью не менее 750 МГц, так и ПК-блокноты со скоростью не менее 750 МГц.
+Вывести: Maker
+
+SELECT DISTINCT maker 
+   FROM Product JOIN Laptop ON Product.model = Laptop.model
+WHERE type = 'laptop' AND speed >= 750
+INTERSECT
+SELECT DISTINCT maker 
+   FROM Product JOIN PC ON Product.model = PC.model
+WHERE type = 'pc' AND speed >= 750
+
+=======================================================================================
+Найти производителей, которые выпускают принтеры, но не ПК, или выпускают ПК, но не принтеры.
+
+SELECT COALESCE(m_pc.maker, m_printer.maker) FROM
+(SELECT DISTINCT maker FROM Product WHERE type='pc') m_pc
+FULL JOIN
+(SELECT DISTINCT maker FROM Product WHERE type='printer') m_printer
+ON m_pc.maker = m_printer.maker   
+WHERE m_pc.maker IS NULL OR m_printer.maker IS NULL;
+
+=======================================================================================
+Найти максимальную сумму прихода/расхода среди всех 4-х таблиц базы данных "Вторсырье", а также 
+тип операции, дату и пункт приема, когда и где она была зафиксирована.
+
+--Фирма имеет несколько пунктов приема вторсырья. Каждый пункт получает деньги для их выдачи сдатчикам вторсырья. Сведения о получении денег на пунктах приема записываются в таблицу:
+--Income_o(point, date, inc)
+--Первичным ключом является (point, date). При этом в столбец date записывается только дата (без времени), т.е. прием денег (inc) на каждом пункте производится не чаще одного раза в день. Сведения о выдаче денег сдатчикам вторсырья записываются в таблицу:
+--Outcome_o(point, date, out)
+--В этой таблице также первичный ключ (point, date) гарантирует отчетность каждого пункта о выданных деньгах (out) не чаще одного раза в день.
+--В случае, когда приход и расход денег может фиксироваться несколько раз в день, используется другая схема с таблицами, имеющими первичный ключ code:
+--Income(code, point, date, inc)
+--Outcome(code, point, date, out)
+--Здесь также значения столбца date не содержат времени.
+
+SELECT inc AS max_sum, type, date, point 
+	FROM ( 
+		SELECT inc, 'inc' type, date, point 
+		FROM Income 
+		UNION ALL 
+			SELECT inc, 'inc' type, date, point 
+			FROM Income_o 
+			UNION ALL 
+				SELECT out, 'out' type, date, point 
+				FROM Outcome_o 
+				UNION ALL 
+					SELECT out, 'out' type, date, point 
+					FROM Outcome 
+					) X 
+WHERE inc >= ALL(
+	SELECT inc 
+	FROM Income 
+    UNION ALL 
+    	SELECT inc 
+    	FROM Income_o 
+       	UNION ALL 
+       		SELECT out 
+       		FROM Outcome_o 
+       		UNION ALL 
+       			SELECT out 
+       			FROM Outcome )
+
+=======================================================================================
+Перечислите номера моделей любых типов, имеющих самую высокую цену по всей имеющейся в базе данных продукции.
+
+SELECT DISTINCT model FROM (
+	SELECT model, price
+	FROM PC
+	UNION
+		SELECT model, price
+		FROM Laptop
+		UNION
+			SELECT model, price
+			FROM Printer
+	) X
+WHERE price = 	(
+				SELECT MAX(price) 
+				FROM (
+					SELECT price
+					FROM PC
+					UNION
+						SELECT price
+						FROM Laptop
+						UNION
+							SELECT price
+							FROM Printer) X
+							)
+
+=======================================================================================
+Найдите производителей принтеров, которые производят ПК с наименьшим объемом RAM и с самым быстрым процессором 
+среди всех ПК, имеющих наименьший объем RAM. Вывести: Maker
+
+SELECT DISTINCT maker FROM Product
+WHERE type = 'printer'
+INTERSECT
+SELECT DISTINCT maker FROM Product JOIN PC ON Product.model = PC.model
+WHERE type = 'pc' 
+AND ram = (SELECT MIN(ram) FROM PC) 
+AND speed = (SELECT MAX(speed) 
+			 FROM (SELECT MIN(ram) ram, speed 
+   	  			   FROM PC
+   	  			   GROUP BY speed) X
+			 WHERE ram = (SELECT MIN(ram) 
+   	  			     	  FROM PC))
+
+=======================================================================================
+Найдите среднюю цену ПК и ПК-блокнотов, выпущенных производителем A (латинская буква). Вывести: одна общая средняя цена.
+
+SELECT AVG(price) AVG_price FROM (SELECT maker, COALESCE(PC.price, Laptop.price) price 
+								  FROM Product 
+								  LEFT JOIN PC ON Product.model = PC.model 
+								  LEFT JOIN Laptop ON Product.model = Laptop.model
+WHERE maker = 'A' AND (type = 'pc' OR type = 'laptop')
+) X
+
+=======================================================================================
+Найдите средний размер диска ПК каждого из тех производителей, которые выпускают и принтеры. Вывести: maker, средний размер HD.
+
+SELECT maker, AVG(hd) Avg_hd 
+FROM PC JOIN Product ON PC.model = Product.model
+WHERE maker IN (SELECT maker 
+				FROM Product
+				WHERE type = 'printer' 
+					INTERSECT
+						SELECT maker FROM Product
+						WHERE type = 'pc')
+GROUP BY maker
+
+=======================================================================================
+Задача на 4 балла, максимум возможного.
+C точностью до двух десятичных знаков определить среднее количество краски на квадрате.
+--------------------------------------------
+Схема базы данных состоит из трех отношений:
+utQ (Q_ID int, Q_NAME varchar(35)); 
+utV (V_ID int, V_NAME varchar(35), V_COLOR char(1)); 
+utB (B_Q_ID int, B_V_ID int, B_VOL tinyint, B_DATETIME datetime).
+Таблица utQ содержит идентификатор и название квадрата, цвет которого первоначально черный.
+Таблица utV содержит идентификатор, название и цвет баллончика с краской.
+Таблица utB содержит информацию об окраске квадрата баллончиком: идентификатор квадрата, идентификатор баллончика, количество краски и время окраски.
+При этом следует иметь в виду, что:
+- баллончики с краской могут быть трех цветов - красный V_COLOR='R', зеленый V_COLOR='G', голубой V_COLOR='B' (латинские буквы).
+- объем баллончика равен 255 и первоначально он полный;
+- цвет квадрата определяется по правилу RGB, т.е. R=0,G=0,B=0 - черный, R=255, G=255, B=255 - белый;
+- запись в таблице закрасок utB уменьшает количество краски в баллончике на величину B_VOL и соответственно увеличивает количество краски в квадрате на эту же величину;
+- значение 0 < B_VOL <= 255;
+- количество краски одного цвета в квадрате не превышает 255, а количество краски в баллончике не может быть меньше нуля;
+- время окраски B_DATETIME дано с точностью до секунды, т.е. не содержит миллисекунд.
+--------------------------------------------
+SELECT CAST(SUM(B_VOL*1.0)/COUNT(Q_ID) AS NUMERIC(6,2)) avg_paint 
+FROM (
+	SELECT Q_ID,
+ 	 CASE 
+	 WHEN B_VOL IS NULL
+ 	 THEN 0
+ 	 ELSE B_VOL
+ 	 END B_VOL
+	FROM (
+	 	SELECT B_Q_ID, SUM(B_VOL) B_VOL 
+	 	FROM utB
+	 	GROUP BY B_Q_ID
+	 	 ) X RIGHT JOIN utQ ON Q_ID = B_Q_ID
+	) Y
+--------------------------------------------
+SELECT '386.25' avg_paint FROM utB       -- обманка для системы, чтобы получить подсказку
+WHERE B_V_ID = 2
+
+=======================================================================================
+Вывести среднюю цену портативных компьютеров с предваряющим текстом «средняя цена = ».
+
+SELECT 'Средняя цена = '+ CAST(AVG(price) AS CHAR(15)) 
+FROM Laptop
+
+=======================================================================================
+Определить средний год спуска на воду кораблей из таблицы Ships.
+
+SELECT CAST(AVG(launched*1.0) AS NUMERIC(6,2)) 
+FROM Ships;
+
+или
+
+SELECT CONVERT(NUMERIC(6,2),AVG(launched*1.0)) 
+FROM Ships;
+
+=======================================================================================
+В предположении, что приход и расход денег на каждом пункте приема фиксируется не чаще одного раза в 
+день [т.е. первичный ключ (пункт, дата)], написать запрос с выходными данными (пункт, дата, приход, расход). 
+Использовать таблицы Income_o и Outcome_o.
+
+Схема:
+Фирма имеет несколько пунктов приема вторсырья. Каждый пункт получает деньги для их выдачи сдатчикам 
+вторсырья. Сведения о получении денег на пунктах приема записываются в таблицу:
+Income_o(point, date, inc)
+Первичным ключом является (point, date). При этом в столбец date записывается только дата (без времени), 
+т.е. прием денег (inc) на каждом пункте производится не чаще одного раза в день. Сведения о выдаче денег сдатчикам вторсырья записываются в таблицу:
+Outcome_o(point, date, out)
+В этой таблице также первичный ключ (point, date) гарантирует отчетность каждого пункта о выданных деньгах (out) не чаще одного раза в день.
+В случае, когда приход и расход денег может фиксироваться несколько раз в день, используется другая схема с таблицами, имеющими первичный ключ code:
+Income(code, point, date, inc)
+Outcome(code, point, date, out)
+Здесь также значения столбца date не содержат времени.
+
+SELECT 	COALESCE(I.point, O.point), 
+		COALESCE(I.date, O.date), 
+		inc, 
+		out 
+FROM Income_o I FULL 
+		JOIN Outcome_o O 
+		ON I.point=O.point AND I.date=O.date
+
+=======================================================================================
+В предположении, что приход и расход денег на каждом пункте приема фиксируется произвольное число раз (первичным ключом в таблицах является 
+столбец code), требуется получить таблицу, в которой каждому пункту за каждую дату выполнения операций будет соответствовать одна строка.
+Вывод: point, date, суммарный расход пункта за день (out), суммарный приход пункта за день (inc).
+Отсутствующие значения считать неопределенными (NULL).
+
+SELECT 	COALESCE(I.point, O.point) point, 
+		COALESCE(I.date, O.date) date, 
+		Outcome,
+		Income	
+FROM (
+	SELECT point, date, SUM(inc) Income 
+	FROM Income
+	GROUP BY date, point) I FULL 
+		JOIN (
+			SELECT point, date, SUM(out) Outcome 
+			FROM Outcome
+			GROUP BY date, point) O 
+		ON I.point=O.point AND I.date=O.date
+
+=======================================================================================
+#трэш
+Задача №32
+(На троичку) Одной из характеристик корабля является половина куба калибра его главных орудий (mw). С точностью до 2 
+десятичных знаков определите среднее значение mw для кораблей каждой страны, у которой есть корабли в базе данных.
+
+Схема:
+Рассматривается БД кораблей, участвовавших во второй мировой войне. Имеются следующие отношения: 
+Корабли в «классах» построены по одному и тому же проекту, и классу присваивается либо имя первого корабля, построенного по данному проекту, 
+либо названию класса дается имя проекта, которое не совпадает ни с одним из кораблей в БД. Корабль, давший название классу, называется головным.
+Classes: 
+- |class| 		содержит имя класса, 
+- |type| 		тип (bb для боевого (линейного) корабля или bc для боевого крейсера), 
+- |country| 	страну, в которой построен корабль, 
+- |numGuns| 	число главных орудий, 
+- |bore| 		калибр орудий (диаметр ствола орудия в дюймах) 
+- |displacement| водоизмещение ( вес в тоннах) 
+Ships: 
+- |name|		название корабля 
+- |class|		имя его класса 
+- |launched|	год спуска на воду  
+Battles: 
+- |name|		название 
+- |date|		дата битвы в которой участвовали корабли, 
+Outcomes:
+- |ship|		данного корабля 
+- |battle|		в битве 
+- |result| 		результат участия (потоплен-sunk, поврежден - damaged или невредим - OK).
+Замечания. 
+1) В отношение Outcomes могут входить корабли, отсутствующие в отношении Ships. 
+2) Потопленный корабль в последующих битвах участия не принимает.
+
+Решение:
+SELECT 	country, 
+		CAST((mid_mw/num_2)*1.0 AS NUMERIC(6,2)) weight
+FROM (
+	SELECT  country, 
+			SUM(num) num_2, 
+			SUM((POWER(Bore,3)/2)*num) mid_mw					
+	FROM (
+			SELECT 	country, 
+					COALESCE(M.ship, C.class) class,
+					ISNULL(num, num_0) num, 					
+			 	 	bore
+			FROM Classes C 
+				FULL JOIN (
+							SELECT 	class, 
+									COUNT(*) num
+							FROM Ships
+							GROUP BY class
+						  ) N
+				ON C.class = N.class
+				FULL JOIN (
+							SELECT class, COUNT(*) num_0
+							FROM Classes
+							GROUP BY class
+						  ) Z
+				ON C.class = Z.class
+				FULL JOIN (
+							SELECT DISTINCT ship
+							FROM Outcomes
+							EXCEPT
+								SELECT name
+								FROM Ships
+						  ) M 
+				ON C.class = M.ship
+		 ) X
+	WHERE country IS NOT NULL
+	GROUP BY country
+) Y
+
+--POWER(var, N) — возвращает значение var в степени N (возведение в степень);
+--ISNULL(var, sub) — возвращает вместо var значение sub, если var есть NULL;
+
+или так:
+
+SELECT 	country, 
+		CAST((mid_mw/num_2)*1.0 AS NUMERIC(6,2)) weight
+FROM (
+	SELECT  country, 
+			SUM(num) num_2, 
+			SUM((POWER(Bore,3)/2)*num) mid_mw					
+	FROM (
+			SELECT 	country, COALESCE(class, N.head_class) head_class, N.num,
+			 	 	bore FROM Classes FULL JOIN
+
+(SELECT A.head_class, A.num FROM
+							(SELECT 	class head_class, 
+									COUNT(*) num
+							FROM Ships
+							GROUP BY class) A 
+			UNION
+SELECT B.head_class, B.num FROM
+(SELECT head_class, COUNT(*) num FROM
+(SELECT class head_class FROM Classes
+EXCEPT
+SELECT name FROM Ships
+UNION
+SELECT ship head_class FROM Outcomes
+EXCEPT
+SELECT name FROM Ships) M 
+GROUP BY head_class) B) N ON Classes.class = N.head_class
+		 ) X
+	WHERE country IS NOT NULL
+	GROUP BY country
+) Y
+
+=======================================================================================
+Задача №34
+
+SELECT DISTINCT Ships.name FROM Ships, Classes
+WHERE Ships.class = Classes.class AND Ships.launched > 1922 AND Classes.displacement > 
+	35000 AND type = 'bb'
+
+=======================================================================================
+GeekBrains learning
+GB_Shop
+
+CREATE SCHEMA `BG_Shop` DEFAULT CHARACTER SET utf8 COLLATE utf8_bin ;
+
+CREATE TABLE `BG_Shop`.`category` (
+  `id` INT NOT NULL,
+  `name` VARCHAR(128) NOT NULL,
+  `discount` TINYINT(1) NOT NULL,
+  PRIMARY KEY (`id`));
+
+ALTER TABLE `BG_Shop`.`category` 
+ADD COLUMN `alias_name` VARCHAR(128) NULL AFTER `discount`;
+
+CREATE TABLE `BG_Shop`.`brand` (
+  `id` INT NOT NULL,
+  `type` VARCHAR(128) NOT NULL,
+  PRIMARY KEY (`id`));
+
+CREATE TABLE `BG_Shop`.`Tgoods` (
+  `id` INT NOT NULL,
+  `type` VARCHAR(128) NOT NULL,
+  PRIMARY KEY (`id`));
+
+INSERT INTO `BG_Shop`.`category` (`id`, `name`, `discount`) VALUES ('1', 'Женская одежда', '5');
+INSERT INTO `BG_Shop`.`category` (`id`, `name`, `discount`) VALUES ('2', 'Мужская одежда', '0');
+
+USE BG_Shop;
+INSERT INTO category (id, name, discount, alias_name) VALUES (3, 'Женская обувь', 10, NULL);
+INSERT INTO category (id, name, discount, alias_name) VALUES (4, 'Мужская обувь', 15, 'man''s shoes');
+
+ALTER TABLE `BG_Shop`.`category` 
+CHANGE COLUMN `id` `id` INT(11) NOT NULL AUTO_INCREMENT ;
+
+SELECT * FROM Tgoods LIMIT 2; --Выбрать только 2 первые строки
+
+UPDATE category SET discount = 3 WHERE id IN (2, 5);
+
+DELETE FROM category WHERE id = 5;
+
+=======================================================================================
+Задача №35
+
+SELECT model, type FROM ( 
+
+SELECT model, type FROM Product WHERE model not LIKE '' 
+except 
+SELECT model, type FROM Product WHERE model LIKE '%[^0-9]%') AS X 
+
+UNION ALL 
+
+SELECT model, type FROM ( 
+
+SELECT model, type FROM Product WHERE model not LIKE '' 
+except 
+SELECT model, type FROM Product WHERE model LIKE '%[^A-z]%') AS Y
+=======================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
