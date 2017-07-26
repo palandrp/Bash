@@ -1,6 +1,6 @@
 Command for HEX-mode:
-:%xxd 		For hex-mode
-:%xxd -r 	For normal mode
+:%!xxd 		For hex-mode
+:%!xxd -r 	For normal mode
 
 Commands for command mode:
 
