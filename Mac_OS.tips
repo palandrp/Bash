@@ -1,0 +1,7 @@
+Записать tcpdump:
+
+sudo tcpdump -i en0 -s 0 -B 524288 -w ~/Desktop/DumpFile01.pcap
+
+Прочитать дамп:
+
+tcpdump -s 0 -n -e -x -vvv -r ~/Desktop/DumpFile01.pcap
